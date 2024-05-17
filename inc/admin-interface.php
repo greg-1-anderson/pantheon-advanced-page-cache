@@ -34,6 +34,8 @@ function bootstrap() {
 
 	add_filter( 'site_status_tests', __NAMESPACE__ . '\\default_cache_max_age_test' );
 	add_action( 'update_option_pantheon-cache', __NAMESPACE__ . '\\clear_max_age_compare_cache' );
+	add_action( 'admin_init', __NAMESPACE__ . '\\set_max_age_to_default' );
+	add_action( 'admin_notices', __NAMESPACE__ . '\\max_age_updated_admin_notice' );
 }
 
 /**
@@ -47,8 +49,9 @@ function admin_notice_no_mu_plugin() {
 	 * Allow disabling the admin notice.
 	 *
 	 * @param bool $disable_admin_notices Whether to disable the admin notice.
+	 * @param string $callback The name of the current callback function.
 	 */
-	if ( apply_filters( 'pantheon_apc_disable_admin_notices', false ) ) {
+	if ( apply_filters( 'pantheon_apc_disable_admin_notices', false, __FUNCTION__ ) ) {
 		return;
 	}
 
@@ -71,7 +74,7 @@ function admin_notice_no_mu_plugin() {
 function admin_notice_old_mu_plugin() {
 	$current_screen = get_current_screen();
 
-	if ( apply_filters( 'pantheon_apc_disable_admin_notices', false ) || 'settings_page_pantheon-cache' !== $current_screen->id ) {
+	if ( apply_filters( 'pantheon_apc_disable_admin_notices', false, __FUNCTION__ ) || 'settings_page_pantheon-cache' !== $current_screen->id ) {
 		return;
 	}
 
@@ -109,7 +112,7 @@ function admin_notice_old_mu_plugin() {
 function admin_notice_maybe_recommend_higher_max_age() {
 	$current_screen = get_current_screen();
 
-	if ( apply_filters( 'pantheon_apc_disable_admin_notices', false ) || 'settings_page_pantheon-cache' !== $current_screen->id ) {
+	if ( apply_filters( 'pantheon_apc_disable_admin_notices', false, __FUNCTION__ ) || 'settings_page_pantheon-cache' !== $current_screen->id ) {
 		return;
 	}
 
@@ -316,4 +319,87 @@ function test_cache_max_age() {
  */
 function clear_max_age_compare_cache() {
 	delete_transient( 'papc_max_age_compare' );
+}
+
+/**
+ * Set the default_ttl from the mu-plugin to WEEK_IN_SECONDS if it was saved as 600 seconds.
+ *
+ * @since 2.0.0
+ * @return bool
+ */
+function set_max_age_to_default() {
+	$pantheon_cache = get_option( 'pantheon-cache', [] );
+	$pantheon_max_age_updated = get_option( 'pantheon_max_age_updated', false );
+
+	// If we've already done this, bail.
+	if ( $pantheon_max_age_updated ) {
+		return;
+	}
+
+	// If nothing is saved, bail. The default is used automatically.
+	if ( ! isset( $pantheon_cache['default_ttl'] ) ) {
+		return;
+	}
+
+	// Everything beyond this point assumes the max age has been set manually or will be set to the default.
+	update_option( 'pantheon_max_age_updated', true );
+
+	// If the default_ttl is not 600, bail.
+	if ( 600 !== $pantheon_cache['default_ttl'] ) {
+		return;
+	}
+
+	// Set the max age. At this point, we should only be here if it was set to 600. We're using the filter here in case someone has overridden the default.
+	$pantheon_cache['default_ttl'] = apply_filters( 'pantheon_cache_default_max_age', WEEK_IN_SECONDS );
+
+	// Update the option and set the max_age_updated flag and show the admin notice.
+	update_option( 'pantheon-cache', $pantheon_cache );
+}
+
+/**
+ * Display an admin notice if the max-age was updated.
+ *
+ * @since 2.0.0
+ * @return void
+ */
+function max_age_updated_admin_notice() {
+	// Check if notices should be disabled. This includes if the user is using a version of WordPress that does not support wp_admin_notice.
+	if ( apply_filters( 'pantheon_apc_disable_admin_notices', false, __FUNCTION__ ) ) {
+		return;
+	}
+
+	// Can the user manage options? If not, don't show the notice.
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	// Check user meta to see if this user has seen this notice before.
+	$current_user_id = get_current_user_id();
+	$dismissed = get_user_meta( $current_user_id, 'pantheon_max_age_updated_notice', true );
+	if ( $dismissed ) {
+		return;
+	}
+
+	// Check if the max-age was updated.
+	$max_age_updated = get_option( 'pantheon_max_age_updated', false );
+	if ( ! $max_age_updated ) {
+		return;
+	}
+
+	// If we got here, this is the _first time_ this user has seen this notice since the option was updated. Show the notice and update the user meta.
+	wp_admin_notice(
+		sprintf(
+			// translators: %1$s is the humanized max-age, %2$d is a link to the Pantheon documentation.
+			__( 'The Pantheon GCDN cache max-age has been updated. The previous value was 10 minutes. The new value is %1$s. For more information, refer to the <a href="%2$s">Pantheon documentation</a>.', 'pantheon-advanced-page-cache' ),
+			humanized_max_age(),
+			'https://docs.pantheon.io/guides/wordpress-configurations/wordpress-cache-plugin'
+		),
+		[
+			'type' => 'info',
+			'dismissible' => false,
+		]
+	);
+
+	// Update the user meta to prevent this notice from showing again after they've seen it once.
+	update_user_meta( $current_user_id, 'pantheon_max_age_updated_notice', true );
 }
