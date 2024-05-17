@@ -2,9 +2,9 @@
 
 **Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber), [kporras07](https://profiles.wordpress.org/kporras07), [jspellman](https://profiles.wordpress.org/jspellman/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [ryanshoover](https://profiles.wordpress.org/ryanshoover/), [rwagner00](https://profiles.wordpress.org/rwagner00/), [pwtyler](https://profiles.wordpress.org/pwtyler)  
 **Tags:** pantheon, cdn, cache  
-**Requires at least:** 4.7  
-**Tested up to:** 6.4.3  
-**Stable tag:** 1.5.0-dev  
+**Requires at least:** 6.4  
+**Tested up to:** 6.5.3  
+**Stable tag:** 2.0.0-dev  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,9 @@ Automatically clear related pages from Pantheon's Edge when you update content. 
 
 ## Description ##
 
-[![Actively Maintained](https://img.shields.io/badge/Pantheon-Actively_Maintained-yellow?logo=pantheon&color=FFDC28)](https://pantheon.io/docs/oss-support-levels#actively-maintained-support) [![CircleCI](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache.svg?style=svg)](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache)
+[![Actively Maintained](https://img.shields.io/badge/Pantheon-Actively_Maintained-yellow?logo=pantheon&color=FFDC28)](https://pantheon.io/docs/oss-support-levels#actively-maintained-support) 
+[![Lint and Test](https://github.com/pantheon-systems/pantheon-advanced-page-cache/actions/workflows/lint-test.yml/badge.svg)](https://github.com/pantheon-systems/pantheon-advanced-page-cache/actions/workflows/lint-test.yml)
+[![CircleCI](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache.svg?style=svg)](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache)
 
 For sites wanting fine-grained control over how their responses are represented in their edge cache, Pantheon Advanced Page Cache is the golden ticket. Here's a high-level overview of how the plugin works:
 
@@ -353,7 +355,10 @@ Pantheon Advanced Page Cache integrates with WordPress plugins, including:
 See [CONTRIBUTING.md](https://github.com/pantheon-systems/pantheon-advanced-page-cache/blob/master/CONTRIBUTING.md) for information on contributing.
 
 ## Changelog ##
-### 1.5.0-dev (March 11, 2024) ###
+### 2.0.0-dev ###
+* Adds new admin alerts and Site Health tests about default cache max-age settings and recommendations [[#268](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/268)]. The default Pantheon GCDN cache max-age value has been updated to 1 week in the [Pantheon MU plugin](https://github.com/pantheon-systems/pantheon-mu-plugin). For more information, see the [release note](https://docs.pantheon.io/release-notes/2024/04/pantheon-mu-plugin-1-4-0-update).
+
+### 1.5.0 (March 11, 2024) ###
 * Adds filter `pantheon_purge_post_type_ignored` to allow an array of post types to ignore before purging cache [[#258](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/258)]
 * Adds [wpunit-helpers](https://github.com/pantheon-systems/wpunit-helpers) for running/setting up WP Unit tests
 
