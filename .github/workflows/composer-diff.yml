@@ -56,6 +56,10 @@ jobs:
           else
             jq '.dependencies = {}' package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
           fi
+      - name: Validate JSON files
+        run: |
+          jq '.' package-lock-develop.json
+          jq '.' package-lock-modified.json
       - name: Generate package-lock diff
         id: package-lock-diff
         run: |
