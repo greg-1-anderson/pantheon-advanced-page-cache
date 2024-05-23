@@ -65,3 +65,13 @@ jobs:
             <strong>NPM Package Lock Changes</strong>
 
             ${{ steps.package-lock-diff.outputs.lock_diff_output }}
+      - name: Debug
+        if: ${{ steps.package-lock-diff.outputs.exit_code != 0 }}
+        run: |
+          echo "Debugging..."
+          echo "package-lock-develop.json"
+          cat package-lock-develop.json
+          echo "package-lock.json"
+          cat package-lock.json
+          echo "lock_diff_output"
+          echo ${{ steps.package-lock-diff.outputs.lock_diff_output }}
