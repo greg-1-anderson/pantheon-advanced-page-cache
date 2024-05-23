@@ -27,6 +27,8 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 		delete_option( 'pantheon-cache' );
 		delete_option( 'pantheon_max_age_updated' );
 		delete_transient( 'papc_max_age_compare' );
+		remove_all_filters( 'pantheon_cache_default_max_age' );
+		remove_all_filters( 'pantheon_apc_disable_admin_notices' );
 	}
 
 	/**
@@ -50,7 +52,7 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 		$test_results = test_cache_max_age();
 		$this->assertEquals( 'recommended', $test_results['status'] );
 		$this->assertEquals( 'red',$test_results['badge']['color'] );
-		$this->assertStringContainsString( '300 seconds', $test_results['description'] );
+		$this->assertStringContainsString( '5 mins', $test_results['description'] );
 		$this->assertStringContainsString( 'We recommend increasing to 1 week', $test_results['description'] );
 	}
 
@@ -77,7 +79,7 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 		$this->assertEquals( 'good', $test_results['status'] );
 		$this->assertEquals( 'blue',$test_results['badge']['color'] );
 		$this->assertStringContainsString( '1 week', $test_results['label'] );
-		$this->assertStringContainsString( 'Pantheon GCDN Cache Max-Age set to 1 week', $test_results['label'] );
+		$this->assertStringContainsString( 'Pantheon GCDN Cache Max Age set to 1 week', $test_results['label'] );
 	}
 
 	/**
@@ -241,7 +243,7 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 	/**
 	 * Test the admin notice for the max age being updated.
 	 */
-	function test_max_age_updated_admin_notice() {
+	public function test_max_age_updated_admin_notice() {
 		// Switch to admin.
 		wp_set_current_user( 1 );
 
@@ -259,15 +261,16 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 		delete_option( 'pantheon-cache' );
 		delete_user_meta( $current_user_id, 'pantheon_max_age_updated_notice' );
 
-		// Make sure the option says we've updated the max age. We're checking the notice, not the option.
+		// Make sure the option says we've updated the max age.
 		update_option( 'pantheon_max_age_updated', true );
+		update_option( 'pantheon-cache', [ 'default_ttl' => WEEK_IN_SECONDS ] );
 
 		ob_start();
 		max_age_updated_admin_notice();
 		$notice = ob_get_clean();
 
 		// The notice that we're catching should be the one that the max-age was updated.
-		$this->assertStringContainsString( 'The Pantheon GCDN cache max-age has been updated. The previous value was 10 minutes. The new value is 1 week.', $notice );
+		$this->assertStringContainsString( 'The Pantheon GCDN cache max age has been updated. The previous value was 10 minutes. The new value is 1 week.', $notice );
 		// The user meta should have been updated in the process.
 		$this->assertEquals( 1, get_user_meta( $current_user_id, 'pantheon_max_age_updated_notice', true ) );
 	}
@@ -275,7 +278,7 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 	/**
 	 * Test that the user meta for the global admin notice is created.
 	 */
-	function test_low_max_age_admin_notice_user_meta() {
+	public function test_low_max_age_admin_notice_user_meta() {
 		// Switch to admin.
 		wp_set_current_user( 1 );
 		delete_user_meta( 1, 'pantheon_max_age_global_warning_notice' );
@@ -285,14 +288,14 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 
 		$notice_shown = get_user_meta( 1, 'pantheon_max_age_global_warning_notice', true );
 		$this->assertStringContainsString( 'notice-error', $notice );
-		$this->assertStringContainsString( 'Your site\'s cache max-age is set below the recommendation (1 week).' , $notice );
+		$this->assertStringContainsString( 'Your site\'s cache max age is set below the recommendation (1 week).' , $notice );
 		$this->assertEquals( 1, $notice_shown );
 	}
 
 	/**
 	 * Test that the user meta for the global admin notice is created.
 	 */
-	function test_low_max_age_admin_notice_user_meta_warning() {
+	public function test_low_max_age_admin_notice_user_meta_warning() {
 		// Switch to admin.
 		wp_set_current_user( 1 );
 		delete_user_meta( 1, 'pantheon_max_age_global_warning_notice' );
@@ -303,7 +306,142 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 
 		$notice_shown = get_user_meta( 1, 'pantheon_max_age_global_warning_notice', true );
 		$this->assertStringContainsString( 'notice-warning', $notice );
-		$this->assertStringContainsString( 'Your site\'s cache max-age is set below the recommendation (1 week).' , $notice );
+		$this->assertStringContainsString( 'Your site\'s cache max age is set below the recommendation (1 week).' , $notice );
 		$this->assertEquals( 1, $notice_shown );
+	}
+
+	/**
+	 * Test the max age setting description.
+	 *
+	 * @dataProvider add_max_age_setting_description_provider
+	 */
+	public function test_add_max_age_setting_description( $max_age, $expected ) {
+
+		if ( $max_age === 'filter-below' ) {
+			// Filter the max age and test again.
+			add_filter( 'pantheon_cache_default_max_age', function() {
+				return 3 * DAY_IN_SECONDS;
+			} );
+		} elseif ( $max_age === 'filter-above' ) {
+			// Filter the max age and test again.
+			add_filter( 'pantheon_cache_default_max_age', function() {
+				return 10 * DAY_IN_SECONDS;
+			} );
+		} else {
+			update_option( 'pantheon-cache', [ 'default_ttl' => $max_age ] );
+		}
+
+		$output = add_max_age_setting_description();
+		$this->assertStringContainsString( $expected , $output );
+	}
+
+	/**
+	 * Data provider for test_add_max_age_setting_description.
+	 *
+	 * @return array
+	 */
+	public function add_max_age_setting_description_provider() {
+		return [
+			[ 'filter-below', 'Your cache maximum age is currently <strong>below</strong> the recommended value. This value has been hardcoded to <strong>3 days</strong> via a filter.' ],
+			[ 'filter-above', 'Your cache maximum age is currently <strong>above</strong> the recommended value. This value has been hardcoded to <strong>1 week</strong> via a filter.' ],
+			[ 600, 'Your cache maximum age is currently <strong>below</strong> the recommended value. <br /><strong>Warning:</strong>The cache max age is not one of the recommended values.' ],
+			[ WEEK_IN_SECONDS, 'Your cache maximum age is currently set to the recommended value.' ],
+			[ MONTH_IN_SECONDS, 'Your cache maximum age is currently <strong>above</strong> the recommended value.' ],
+			[ YEAR_IN_SECONDS, 'Your cache maximum age is currently <strong>above</strong> the recommended value.' ],
+		];
+	}
+
+	/**
+	 * Test the update_default_ttl_input function. Check the input type if the max age has been filtered.
+	 *
+	 * @dataProvider update_default_ttl_input_provider
+	 */
+	public function test_update_default_ttl_input( $max_age, $expected ) {
+		if ( $max_age === 'filter' ) {
+			// Filter the max age and test again.
+			add_filter( 'pantheon_cache_default_max_age', function() {
+				return 3 * DAY_IN_SECONDS;
+			} );
+		} else {
+			update_option( 'pantheon-cache', [ 'default_ttl' => $max_age ] );
+		}
+
+		$default_ttl_field = $this->default_ttl_field_mock();
+		$output = update_default_ttl_input( $default_ttl_field );
+		$this->assertStringContainsString( $expected , $output );
+	}
+
+	/**
+	 * Data provider for test_update_default_ttl_input.
+	 *
+	 * @return array
+	 */
+	public function update_default_ttl_input_provider() {
+		return [
+			[ 3 * DAY_IN_SECONDS, 'Custom (3 days)' ],
+			[ WEEK_IN_SECONDS, 'select' ],
+			[ 'filter', 'disabled' ],
+		];
+	}
+
+	/**
+	 * Add the HTML for the default max-age field.
+	 *
+	 * Copy pasta from pantheon-mu-plugin with output buffering.
+	 *
+	 * @return string
+	 */
+	private function default_ttl_field_mock() {
+		$options = get_option( 'pantheon-cache' );
+		ob_start();
+		$disabled = ( has_filter( 'pantheon_cache_default_max_age' ) ) ? ' disabled' : '';
+		echo wp_kses_post( apply_filters( 'pantheon_cache_max_age_field_before_html', '<div class="pantheon-cache-default-max-age">' ) );
+		echo '<h3>' . esc_html__( 'Page Cache Max Age', 'pantheon-cache' ) . '</h3>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<p>' . wp_kses_post( sprintf(
+			// translators: %s is a link to the Pantheon Advanced Page Cache plugin page.
+			__( 'When your site content is updated, <a href="%s">Pantheon Advanced Page Cache</a> clears page cache automatically. This setting determines how long a page will be stored in the Global Content Delivery Network (GCDN) cache before GCDN retrieves the content from WordPress again.', 'pantheon-cache' ),
+			'https://wordpress.org/plugins/pantheon-advanced-page-cache/'
+		) ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		$input_field = '<input type="text" name="pantheon-cache[default_ttl]" value="' . $options['default_ttl'] . '" size="7" ' . $disabled . ' /> ' . esc_html__( 'seconds', 'pantheon-cache' );
+		echo apply_filters( 'pantheon_cache_max_age_input', $input_field );
+		echo wp_kses_post( apply_filters( 'pantheon_cache_max_age_field_after_html', '</div>' ) );
+
+		// Display a message if the setting is disabled.
+		if ( $disabled ) {
+			echo '<p>' . esc_html__( 'This setting is disabled because the default max-age has been filtered to the current value.', 'pantheon-cache' ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+		return ob_get_clean();
+	}
+
+	/**
+	 * Test the max_age_options method.
+	 */
+	public function test_max_age_options() {
+		$options = max_age_options();
+		foreach( $this->max_age_options_mock() as $max_age => $expected ) {
+			$this->assertArrayHasKey( $max_age, $options );
+			$this->assertEquals( $expected, $options[ $max_age ] );
+		}
+
+		// Test the filter.
+		add_filter( 'pantheon_apc_max_age_options', function() {
+			return [ 3 * DAY_IN_SECONDS => 'foo (bar)' ];
+		} );
+		$options = max_age_options();
+		$this->assertArrayHasKey( 3 * DAY_IN_SECONDS, $options );
+		$this->assertEquals( 'foo (bar)', $options[ 3 * DAY_IN_SECONDS ] );
+	}
+
+	/**
+	 * Option mock for test_max_age_options.
+	 *
+	 * @return array
+	 */
+	public function max_age_options_mock() {
+		return [
+			WEEK_IN_SECONDS => 'Recommended (1 week)',
+			MONTH_IN_SECONDS => 'Extended (1 month)',
+			YEAR_IN_SECONDS => 'Perpetual (1 year)',
+		];
 	}
 }
