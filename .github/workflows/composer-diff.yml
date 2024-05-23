@@ -46,15 +46,11 @@ jobs:
           # Create a copy of the package-lock file.
           cp package-lock.json package-lock-modified.json
           # Rename devDependencies to dependencies.
-          if jq -e '.devDependencies' package-lock-develop.json > /dev/null; then
-            jq '.dependencies = .devDependencies | del(.devDependencies)' package-lock-modified.json > package-lock-modified.json > tmp.json && mv tmp.json package-lock-develop.json
-          else
-            jq '.dependencies = {}' package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
+          if jq -e '.packages[""].devDependencies' package-lock-develop.json > /dev/null; then
+            jq 'packages[""].dependencies = .packages[""].devDependencies | del(.packages[""].devDependencies)' package-lock-modified.json > package-lock-modified.json > tmp.json && mv tmp.json package-lock-develop.json
           fi
-          if jq -e '.devDependencies' package-lock-modified.json > /dev/null; then
-            jq '.dependencies = .devDependencies | del(.devDependencies)' package-lock-modified.json > package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
-          else
-            jq '.dependencies = {}' package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
+          if jq -e '.packages[""].devDependencies' package-lock-modified.json > /dev/null; then
+            jq 'packages[""].dependencies = .packages[""].devDependencies | del(.packages[""].devDependencies)' package-lock-modified.json > package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
           fi
       - name: Validate JSON files
         run: |
