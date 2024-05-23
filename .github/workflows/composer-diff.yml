@@ -44,6 +44,10 @@ jobs:
       - name: Generate package-lock diff
         id: package-lock-diff
         run: |
+          if [ ! -f package-lock-develop.json ]; then
+            echo "No package-lock-develop.json found. Skipping..."
+            exit 1
+          fi
           echo "Comparing lock files..."
           # Run lock-diff and store the output to the step output.
           lock_diff_output=$(npx lock-diff package-lock-develop.json package-lock.json  --format=table)
