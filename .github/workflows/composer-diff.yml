@@ -35,17 +35,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Fetch package-lock.json from develop
+        run: |
+          git fetch origin develop
+          git show origin/develop:package-lock.json > package-lock-develop.json
       - name: NPM Install
         run: npm install
       - name: Generate package-lock diff
         id: package-lock-diff
         run: |
-          # Get the package.lock from develop.
-          echo "Checking out package-lock.json from develop branch"
-          mkdir -p ${{ github.workspace }}/package-lock-diff
-          cd ${{ github.workspace }}/package-lock-diff
-          git checkout origin/develop -- package-lock.json
-          mv ${{ github.workspace }}/package-lock-diff/package-lock.json ${{ github.workspace }}/package-lock-develop.json
           echo "Comparing lock files..."
           # Run lock-diff and store the output to the step output.
           lock_diff_output=$(npx lock-diff package-lock-develop.json package-lock.json  --format=table)
