@@ -1,4 +1,4 @@
-name: Composer Diff
+name: Composer and NPM Package Diffs
 on:
   pull_request:
     paths:
