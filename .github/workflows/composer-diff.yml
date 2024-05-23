@@ -42,9 +42,9 @@ jobs:
         run: |
           # Get the package.lock from develop.
           echo "Checking out package-lock.json from develop branch"
-          mkdir -p /tmp/package-lock-diff
-          git checkout origin/develop -- /tmp/package-lock-diff/package-lock.json
-          mv /tmp/package-lock-diff/package-lock.json ${{ github.workspace }}/package-lock-develop.json
+          mkdir -p ${{ github.workspace }}/package-lock-diff
+          git checkout origin/develop -- ${{ github.workspace }}/package-lock-diff/package-lock.json
+          mv ${{ github.workspace }}/package-lock-diff/package-lock.json ${{ github.workspace }}/package-lock-develop.json
           echo "Comparing lock files..."
           # Run lock-diff and store the output to the step output.
           lock_diff_output=$(npx lock-diff package-lock-develop.json package-lock.json  --format=table)
