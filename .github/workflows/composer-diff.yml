@@ -52,7 +52,7 @@ jobs:
             exit 0
           else
             echo "Differences found in package-lock.json"
-            echo "$lock_diff_output"
+            echo "::set-output name=lock_diff_output::$lock_diff_output"
             exit 1
           fi
           echo "::set-output name=lock_diff_output::$lock_diff_output"
