@@ -46,8 +46,16 @@ jobs:
           # Create a copy of the package-lock file.
           cp package-lock.json package-lock-modified.json
           # Rename devDependencies to dependencies.
-          jq '.dependencies = .devDependencies | del(.devDependencies)' package-lock-modified.json > package-lock-modified.json
-          jq '.dependencies = .devDependencies | del(.devDependencies)' package-lock-develop.json > package-lock-develop.json
+          if jq -e '.devDependencies' package-lock-develop.json > /dev/null; then
+            jq '.dependencies = .devDependencies | del(.devDependencies)' package-lock-modified.json > package-lock-modified.json > tmp.json && mv tmp.json package-lock-develop.json
+          else
+            jq '.dependencies = {}' package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
+          fi
+          if jq -e '.devDependencies' package-lock-modified.json > /dev/null; then
+            jq '.dependencies = .devDependencies | del(.devDependencies)' package-lock-modified.json > package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
+          else
+            jq '.dependencies = {}' package-lock-modified.json > tmp.json && mv tmp.json package-lock-modified.json
+          fi
       - name: Generate package-lock diff
         id: package-lock-diff
         run: |
