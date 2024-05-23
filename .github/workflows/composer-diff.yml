@@ -26,3 +26,42 @@ jobs:
             <strong>Composer Changes</strong>
 
             ${{ steps.composer_diff.outputs.composer_diff }}
+  package-lock-diff:
+    name: NPM Package Lock Diff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: NPM Install
+        run: npm install
+      - name: Generate package-lock diff
+        id: package-lock-diff
+        run: |
+          # Get the package.lock from develop.
+          echo "Checking out package-lock.json from develop branch"
+          mkdir -p /tmp/package-lock-diff
+          git checkout origin/develop -- /tmp/package-lock-diff/package-lock.json
+          mv /tmp/package-lock-diff/package-lock.json ${{ github.workspace }}/package-lock-develop.json
+          echo "Comparing lock files..."
+          # Run lock-diff and store the output to the step output.
+          lock_diff_output=$(npx lock-diff package-lock-develop.json package-lock.json  --format=table)
+          if [ -z "$lock_diff_output" ]; then
+            echo "No differences found in package-lock.json"
+            exit 0
+          else
+            echo "Differences found in package-lock.json"
+            echo "$lock_diff_output"
+            exit 1
+          fi
+          echo "::set-output name=lock_diff_output::$lock_diff_output"
+        continue-on-error: true
+      - uses: marocchino/sticky-pull-request-comment@v2
+        if: ${{ steps.package-lock-diff.outputs.exit_code != 0 }}
+        with:
+          header: package-lock-diff
+          message: |
+            <strong>NPM Package Lock Changes</strong>
+
+            ${{ steps.package-lock-diff.outputs.lock_diff_output }}
