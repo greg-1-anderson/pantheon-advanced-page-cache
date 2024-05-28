@@ -15,6 +15,9 @@ Automatically clear related pages from Pantheon's Edge when you update content. 
 [![Actively Maintained](https://img.shields.io/badge/Pantheon-Actively_Maintained-yellow?logo=pantheon&color=FFDC28)](https://pantheon.io/docs/oss-support-levels#actively-maintained-support)
 [![Lint and Test](https://github.com/pantheon-systems/pantheon-advanced-page-cache/actions/workflows/lint-test.yml/badge.svg)](https://github.com/pantheon-systems/pantheon-advanced-page-cache/actions/workflows/lint-test.yml)
 [![CircleCI](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache.svg?style=svg)](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache)
+[![Actively Maintained](https://img.shields.io/badge/Pantheon-Actively_Maintained-yellow?logo=pantheon&color=FFDC28)](https://pantheon.io/docs/oss-support-levels#actively-maintained-support)
+[![Lint and Test](https://github.com/pantheon-systems/pantheon-advanced-page-cache/actions/workflows/lint-test.yml/badge.svg)](https://github.com/pantheon-systems/pantheon-advanced-page-cache/actions/workflows/lint-test.yml)
+[![CircleCI](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache.svg?style=svg)](https://circleci.com/gh/pantheon-systems/pantheon-advanced-page-cache)
 
 For sites wanting fine-grained control over how their responses are represented in their edge cache, Pantheon Advanced Page Cache is the golden ticket. Here's a high-level overview of how the plugin works:
 
@@ -162,6 +165,20 @@ add_filter( 'pantheon_purge_post_type_ignored', 'filter_ignored_posts' );
 ```
 
 This will prevent the cache from being purged if the given post type is updated.
+
+### Setting the Cache Max Age with a filter
+
+The cache max age setting is controlled by the [Pantheon Page Cache](https://docs.pantheon.io/guides/wordpress-configurations/wordpress-cache-pluginhttps://docs.pantheon.io/guides/wordpress-configurations/wordpress-cache-plugin) admin page. As of 2.0.0, there are three cache age options by default — 1 week, 1 month, 1 year. Pantheon Advanced Page Cache automatically purges the cache of updated and related posts and pages, but you might want to override the cache max age value and set it programmatically. In this case, you can use the `pantheon_cache_default_max_age` filter added in [Pantheon MU plugin 1.4.0+](https://docs.pantheon.io/guides/wordpress-configurations/wordpress-cache-plugin#override-the-default-max-age). For example:
+
+```php
+add_filter( 'pantheon_cache_default_max_age', function() {
+	return 10 * DAY_IN_SECONDS;
+} );
+```
+
+When the cache max age is filtered in this way, the admin option is disabled and a notice is displayed.
+
+![Page Cache Max Age with filtered value](.wordpress-org/screenshots/page-cache-max-age-filtered.png)
 
 ### Setting the Cache Max Age with a filter
 
@@ -349,6 +366,7 @@ Different WordPress actions cause different surrogate keys to be purged, documen
 Setting surrogate keys for posts with large numbers of taxonomies (such as WooCommerce products with a large number of global attributes) can suffer from slower queries. Surrogate keys can be skipped for 'product' post types' taxonomy terms (or any other criteria you see fit) with the following filter:
 
 ```php
+```php
 function custom_should_add_terms($should_add_terms, $wp_query) {
     if ( $wp_query->is_singular( 'product' ) ) {
         return false;
@@ -357,6 +375,28 @@ function custom_should_add_terms($should_add_terms, $wp_query) {
 }
 add_filter('pantheon_should_add_terms', 'custom_should_add_terms', 10, 2);
 ```
+
+## Other Filters ##
+
+### `pantheon_apc_disable_admin_notices`
+Since 2.0.0, Pantheon Advanced Page Cache displays a number of admin notices about your current cache max age value. You can disable these notices with the `pantheon_apc_disable_admin_notices` filter.
+
+```php
+add_filter( 'pantheon_apc_disable_admin_notices', '__return_true' );
+```
+
+Alternately, the function callback is passed into the `pantheon_apc_disable_admin_notices` filter, allowing you to specify precisely _which_ notice to disable, for example:
+
+```php
+add_filter( 'pantheon_apc_disable_admin_notices', function( $disable_notices, $callback ) {
+    if ( $callback === '\\Pantheon_Advanced_Page_Cache\\Admin_Interface\\admin_notice_maybe_recommend_higher_max_age' ) {
+        return true;
+    }
+    return $disable_notices;
+}, 10, 2 );
+```
+
+The above example would disable _only_ the admin notice recommending a higher cache max age.
 
 ## Other Filters ##
 
