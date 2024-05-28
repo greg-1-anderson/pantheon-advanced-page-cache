@@ -1,13 +1,15 @@
 <?php
 /**
- * Plugin Name:     Pantheon Advanced Page Cache
- * Plugin URI:      https://wordpress.org/plugins/pantheon-advanced-page-cache/
- * Description:     Automatically clear related pages from Pantheon's Edge when you update content. High TTL. Fresh content. Visitors never wait.
- * Author:          Pantheon
- * Author URI:      https://pantheon.io
- * Text Domain:     pantheon-advanced-page-cache
- * Domain Path:     /languages
- * Version:         1.5.0
+ * Plugin Name: Pantheon Advanced Page Cache
+ * Plugin URI: https://wordpress.org/plugins/pantheon-advanced-page-cache/
+ * Description: Automatically clear related pages from Pantheon's Edge when you update content. High TTL. Fresh content. Visitors never wait.
+ * Author: Pantheon
+ * Author URI: https://pantheon.io
+ * Text Domain: pantheon-advanced-page-cache
+ * Domain Path: /languages
+ * Version: 2.0.0
+ * Requires at least: 6.4
+ * Tested up to: 6.5.3
  *
  * @package         Pantheon_Advanced_Page_Cache
  */
@@ -101,6 +103,30 @@ function pantheon_wp_prefix_surrogate_keys_with_blog_id( $keys ) {
 }
 
 /**
+ * Bootstrapper for namespaced files that aren't classes.
+ *
+ * Expects that a bootstrap() function exists in the namespaced file.
+ *
+ * @since 2.0.0
+ * @return void
+ */
+function pantheon_bootstrap_namespaces() {
+	$namespaced_files = [
+		'\\Pantheon_Advanced_Page_Cache\\Admin_Interface' => __DIR__ . '/inc/admin-interface.php',
+	];
+
+	foreach ( $namespaced_files as $namespace => $file ) {
+		if ( file_exists( $file ) ) {
+			require $file;
+			call_user_func( $namespace . '\\bootstrap' );
+		} else {
+			wp_die( esc_html( "Could not find $file" ), 'Pantheon Advanced Page Cache error' );
+
+		}
+	}
+}
+
+/**
  * Registers the class autoloader.
  */
 spl_autoload_register(
@@ -121,6 +147,11 @@ spl_autoload_register(
 		}
 	}
 );
+
+/**
+ * Init namespaced files.
+ */
+add_action( 'plugins_loaded', 'pantheon_bootstrap_namespaces' );
 
 /**
  * Registers relevant UI
