@@ -4,6 +4,7 @@ on:
     paths:
       - 'composer.lock'
       - 'package-lock.json'
+      - '.github/workflows/composer-npm-diff.yml'
 permissions:
   contents: write
   pull-requests: write
@@ -41,7 +42,8 @@ jobs:
       - name: Debug
         run: |
           github_json=$(echo "${{ toJson(github) }}" | jq -r .)
-          echo "GitHub: ${github_json}"
+          echo "GitHub:"
+          echo "${github_json}"
       - name: NPM Lockfile Changes
         uses: codepunkt/npm-lockfile-changes@main
         with:
