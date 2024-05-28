@@ -20,5 +20,8 @@
   "scripts": {
     "build": "gulp build",
     "watch": "gulp watch"
+  },
+  "dependencies": {
+    "yarn": "^1.22.22"
   }
 }
