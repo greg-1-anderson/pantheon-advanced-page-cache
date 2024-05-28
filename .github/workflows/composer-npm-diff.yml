@@ -39,6 +39,14 @@ jobs:
           fetch-depth: 0
       - name: Compile NPM packages
         run: npm ci
+      - name: Set the Issue number for npm-lockfile-changes
+        id: set-issue-number-env
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue_number = context.payload.pull_request.number;
+            console.log(`::set-env name=ISSUE_NUMBER::${issue_number}`);
+            core.exportVariable('ISSUE_NUMBER', issue_number);
       # - name: Debug
       #   run: |
       #     echo "${{ toJson(github) }}" > github_context.json
