@@ -45,7 +45,6 @@ jobs:
         with:
           script: |
             const issue_number = context.payload.pull_request.number;
-            console.log(`::set-env name=ISSUE_NUMBER::${issue_number}`);
             core.exportVariable('ISSUE_NUMBER', issue_number);
       # - name: Debug
       #   run: |
