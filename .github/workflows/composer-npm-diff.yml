@@ -40,7 +40,8 @@ jobs:
         run: npm ci
       - name: Debug
         run: |
-          echo "Github: ${{ toJson(github) }}"
+          github_json=$(echo "${{ toJson(github) }}" | jq -r .)
+          echo "GitHub: ${github_json}"
       - name: NPM Lockfile Changes
         uses: codepunkt/npm-lockfile-changes@main
         with:

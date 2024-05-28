@@ -22,6 +22,5 @@
     "watch": "gulp watch"
   },
   "dependencies": {
-    "yarn": "^1.22.22"
   }
 }
