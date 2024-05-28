@@ -39,10 +39,10 @@ jobs:
           fetch-depth: 0
       - name: Compile NPM packages
         run: npm ci
-      - name: Debug
-        run: |
-          echo "${{ toJson(github) }}" > github_context.json
-          jq . github_context.json
+      # - name: Debug
+      #   run: |
+      #     echo "${{ toJson(github) }}" > github_context.json
+      #     jq . github_context.json
       - name: NPM Lockfile Changes
         uses: codepunkt/npm-lockfile-changes@main
         with:
