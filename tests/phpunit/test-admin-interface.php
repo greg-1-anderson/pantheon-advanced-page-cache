@@ -116,7 +116,7 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 	 */
 	public function humanized_max_age_provider() {
 		$five_mins = $this->get_five_minutes();
-		var_dump( $five_mins );
+
 		return [
 			[ 300, $five_mins ], // 300 seconds is humanized to 5 mins.
 			[ 5 * DAY_IN_SECONDS, '5 days' ],
@@ -503,10 +503,20 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 		}
 
 		$nonce_life = apply_filters( 'nonce_life', DAY_IN_SECONDS );
-		filter_nonce_cache_lifetime( $nonce_life );
-		$nonce_cache_lifetime = apply_filters( 'pantheon_cache_default_max_age', $nonce_life );
+		do_action( 'pantheon_cache_nonce_lifetime' );
+		$cache_max_age = apply_filters( 'pantheon_cache_default_max_age', $nonce_life );
 
-		$this->assertEquals( $expected, $nonce_cache_lifetime, sprintf( '%s test failed to assert that %s was equal to %s', $screen, humanized_max_age( $nonce_cache_lifetime ), humanized_max_age( $expected ) ) );
+		$this->assertEquals(
+			$expected,
+			$cache_max_age,
+			sprintf(
+				// 1: Screen, 2: Cache max age, 3: Expected max age.
+				'%s test failed to assert that %s was equal to %s',
+				$screen,
+				humanized_max_age( $cache_max_age ),
+				humanized_max_age( $expected )
+			)
+		);
 	}
 
 	/**

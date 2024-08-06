@@ -80,3 +80,6 @@ terminus wp $SITE_ENV -- cache flush
 terminus wp $SITE_ENV -- plugin activate pantheon-advanced-page-cache
 terminus wp $SITE_ENV -- theme activate twentytwentythree
 terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
+# Add the pantheon-cache option. We're assuming it doesn't already exist.
+terminus wp $SITE_ENV -- option add pantheon-cache '{"default_ttl":600,"maintenance_mode":"disabled"}' --format=json
+
