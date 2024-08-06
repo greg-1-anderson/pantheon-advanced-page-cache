@@ -3,7 +3,7 @@ Contributors: getpantheon, danielbachhuber, kporras07, jspellman, jazzs3quence, 
 Tags: pantheon, cdn, cache
 Requires at least: 6.4
 Tested up to: 6.6.1
-Stable tag: 2.0.1-dev
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -386,7 +386,7 @@ Pantheon Advanced Page Cache integrates with WordPress plugins, including:
 See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/master/CONTRIBUTING.md) for information on contributing.
 
 == Changelog ==
-= 2.0.1-dev =
+= 2.0.1 (6 August 2024) =
 
 = 2.0.0 (28 May 2024) =
 * Adds new admin alerts and Site Health tests about default cache max age settings and recommendations [[#268](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/268), [#271](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/271)]. The default Pantheon GCDN cache max age value has been updated to 1 week in the [Pantheon MU plugin](https://github.com/pantheon-systems/pantheon-mu-plugin). For more information, see the [release note](https://docs.pantheon.io/release-notes/2024/04/pantheon-mu-plugin-1-4-0-update).
