@@ -12,6 +12,20 @@ namespace Pantheon_Advanced_Page_Cache\Admin_Interface;
  */
 class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 	/**
+	 * Get the WordPress version-compatible string for "5 minutes".
+	 */
+	private function get_five_minutes() {
+		$wp_version = get_bloginfo( 'version' );
+
+		// If the version contains a string like -alpha, -beta, etc., strip it.
+		$wp_version = preg_replace( '/-.*/', '', $wp_version );
+
+		// WordPress 6.7 changed the string for "5 mins" to "5 minutes".
+		$five_mins = version_compare( $wp_version, '6.7', '<' ) ? '5 mins' : '5 minutes';
+		return $five_mins;
+	}
+
+	/**
 	 * Set up tests.
 	 */
 	public function setUp(): void {
@@ -46,6 +60,7 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 	 */
 	public function test_site_health_tests_300_seconds() {
 		$tests = apply_filters( 'site_status_tests', [] );
+		$five_mins = $this->get_five_minutes();
 
 		$this->assertContains( 'pantheon_edge_cache', array_keys( $tests['direct'] ) );
 
@@ -53,7 +68,8 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 		$test_results = test_cache_max_age();
 		$this->assertEquals( 'recommended', $test_results['status'] );
 		$this->assertEquals( 'red',$test_results['badge']['color'] );
-		$this->assertStringContainsString( '5 mins', $test_results['description'] );
+
+		$this->assertStringContainsString( $five_mins, $test_results['description'] );
 		$this->assertStringContainsString( 'We recommend increasing to 1 week', $test_results['description'] );
 	}
 
@@ -99,8 +115,10 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 	 * @return array
 	 */
 	public function humanized_max_age_provider() {
+		$five_mins = $this->get_five_minutes();
+		var_dump( $five_mins );
 		return [
-			[ 300, '5 mins' ], // 300 seconds is humanized to 5 mins.
+			[ 300, $five_mins ], // 300 seconds is humanized to 5 mins.
 			[ 5 * DAY_IN_SECONDS, '5 days' ],
 			[ WEEK_IN_SECONDS, '1 week' ],
 		];
@@ -328,6 +346,14 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 			add_filter( 'pantheon_cache_default_max_age', function() {
 				return 10 * DAY_IN_SECONDS;
 			} );
+		} elseif ( $max_age === 'multiple-filters-below' ) {
+			add_filter( 'pantheon_cache_default_max_age', [ $this, 'reset_cache_max_age' ] );
+			add_filter( 'pantheon_cache_default_max_age', [ $this, 'another_function' ] );
+			add_filter( 'pantheon_cache_default_max_age', function() {
+				return 3 * DAY_IN_SECONDS;
+			} );
+		} elseif ( $max_age === 'just-named-filters' ) {
+			add_filter( 'pantheon_cache_default_max_age', [ $this, 'reset_cache_max_age' ] );
 		} else {
 			update_option( 'pantheon-cache', [ 'default_ttl' => $max_age ] );
 		}
@@ -343,13 +369,29 @@ class Admin_Interface_Functions extends \Pantheon_Advanced_Page_Cache_Testcase {
 	 */
 	public function add_max_age_setting_description_provider() {
 		return [
-			[ 'filter-below', 'Your cache maximum age is currently <strong>below</strong> the recommended value. This value has been hardcoded to <strong>3 days</strong> via a filter.' ],
-			[ 'filter-above', 'Your cache maximum age is currently <strong>above</strong> the recommended value. This value has been hardcoded to <strong>1 week</strong> via a filter.' ],
+			[ 'filter-below', 'Your cache maximum age is currently <strong>below</strong> the recommended value. This value has been hardcoded to <strong>3 days</strong> via a filter hooked to an anonymous function in your code.' ],
+			[ 'filter-above', 'Your cache maximum age is currently <strong>above</strong> the recommended value. This value has been hardcoded to <strong>1 week</strong> via a filter hooked to an anonymous function in your code.' ],
+			[ 'multiple-filters-below', 'Your cache maximum age is currently <strong>below</strong> the recommended value. This value has been hardcoded to <strong>3 days</strong> via a filter hooked to <code>Pantheon_Advanced_Page_Cache\Admin_Interface\Admin_Interface_Functions::reset_cache_max_age</code>, <code>Pantheon_Advanced_Page_Cache\Admin_Interface\Admin_Interface_Functions::another_function</code>, and an anonymous function in your code.' ],
+			[ 'just-named-filters', 'Your cache maximum age is currently <strong>below</strong> the recommended value. This value has been hardcoded to <strong>1 second</strong> via a filter hooked to <code>Pantheon_Advanced_Page_Cache\Admin_Interface\Admin_Interface_Functions::reset_cache_max_age<code> in your code.' ],
 			[ 600, 'Your cache maximum age is currently <strong>below</strong> the recommended value. <br /><strong>Warning:</strong>The cache max age is not one of the recommended values.' ],
 			[ WEEK_IN_SECONDS, 'Your cache maximum age is currently set to the recommended value.' ],
 			[ MONTH_IN_SECONDS, 'Your cache maximum age is currently <strong>above</strong> the recommended value.' ],
 			[ YEAR_IN_SECONDS, 'Your cache maximum age is currently <strong>above</strong> the recommended value.' ],
 		];
+	}
+
+	/**
+	 * Filter callback for testing pantheon_cache_default_max_age.
+	 */
+	public function reset_cache_max_age() {
+		return 0;
+	}
+
+	/**
+	 * Filter callback for testing pantheon_cache_default_max_age.
+	 */
+	public function another_function() {
+		return 42;
 	}
 
 	/**
