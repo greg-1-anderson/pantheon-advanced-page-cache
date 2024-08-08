@@ -4,7 +4,7 @@
 **Tags:** pantheon, cdn, cache  
 **Requires at least:** 6.4  
 **Tested up to:** 6.6.1  
-**Stable tag:** 2.1.0  
+**Stable tag:** 2.1.1-dev  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -402,6 +402,8 @@ Pantheon Advanced Page Cache integrates with WordPress plugins, including:
 See [CONTRIBUTING.md](https://github.com/pantheon-systems/pantheon-advanced-page-cache/blob/master/CONTRIBUTING.md) for information on contributing.
 
 ## Changelog ##
+
+### 2.1.1-dev ###
 
 ### 2.1.0 (8 August 2024) ###
 * Adds any callable functions hooked to the `pantheon_cache_default_max_age` filter to the message that displays in the WordPress admin when a cache max age filter is active. [[#292](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/292)] This gives some context to troubleshoot if the filter is active somewhere in the codebase. If an anonymous function is used, it is noted in the message that displays.
