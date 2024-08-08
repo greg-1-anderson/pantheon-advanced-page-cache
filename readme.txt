@@ -2,8 +2,8 @@
 Contributors: getpantheon, danielbachhuber, kporras07, jspellman, jazzs3quence, ryanshoover, rwagner00, pwtyler
 Tags: pantheon, cdn, cache
 Requires at least: 6.4
-Tested up to: 6.5.3
-Stable tag: 2.0.0
+Tested up to: 6.6.1
+Stable tag: 2.1.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -133,7 +133,7 @@ Need a bit more power? In addition to `pantheon_wp_clear_edge_keys()`, there are
 
 = Ignoring Specific Post Types =
 
-By default, Pantheon Advanced Page Cache is pretty aggressive in how it clears its surrogate keys. Specifically, any time `wp_insert_post` is called (which can include any time a post of any type is added or updated, even private post types), it will purge a variety of keys including `home`, `front`, `404` and `feed`. To bypass or override this behavior, since 1.5.0-dev we have a filter allowing an array of post types to ignore to be passed before those caches are purged. By default, the `revision` post type is ignored, but others can be added:
+By default, Pantheon Advanced Page Cache is pretty aggressive in how it clears its surrogate keys. Specifically, any time `wp_insert_post` is called (which can include any time a post of any type is added or updated, even private post types), it will purge a variety of keys including `home`, `front`, `404` and `feed`. To bypass or override this behavior, since 1.5.0 we have a filter allowing an array of post types to ignore to be passed before those caches are purged. By default, the `revision` post type is ignored, but others can be added:
 
 	/**
 	* Add a custom post type to the ignored post types.
@@ -160,15 +160,13 @@ The cache max age setting is controlled by the [Pantheon Page Cache](https://doc
 
 When the cache max age is filtered in this way, the admin option is disabled and a notice is displayed.
 
-= Setting the Cache Max Age with a filter =
+= Updating the cache max age based on nonces =
 
-The cache max age setting is controlled by the [Pantheon Page Cache](https://docs.pantheon.io/guides/wordpress-configurations/wordpress-cache-plugin) admin page. As of 2.0.0, there are three cache age options by default — 1 week, 1 month, 1 year. Pantheon Advanced Page Cache automatically purges the cache of updated and related posts and pages, but you might want to override the cache max age value and set it programmatically. In this case, you can use the `pantheon_cache_default_max_age` filter added in [Pantheon MU plugin 1.4.0+](https://docs.pantheon.io/guides/wordpress-configurations/wordpress-cache-plugin#override-the-default-max-age). For example:
+Nonces created on the front-end, often used to secure forms and other data, have a lifetime, and if the cache max age is longer than the nonce lifetime, the nonce may expire before the cache does. To avoid this, you can use the `pantheon_cache_nonce_lifetime` action to set the `pantheon_cache_default_max_age` to less than the nonce lifetime. For example:
 
-	add_filter( 'pantheon_cache_default_max_age', function() {
-		return 10 * DAY_IN_SECONDS;
-	} );
+	do_action( 'pantheon_cache_nonce_lifetime' );
 
-When the cache max age is filtered in this way, the admin option is disabled and a notice is displayed.
+It's important to wrap your `do_action` in the appropriate conditionals to ensure that the action is only called when necessary and not filtering the cache max age in cases when it's not necessary. This might mean only running on certain pages or in certain contexts in your code.
 
 == WP-CLI Commands ==
 
@@ -343,24 +341,6 @@ Setting surrogate keys for posts with large numbers of taxonomies (such as WooCo
 
 == Other Filters ==
 
-= `pantheon_apc_disable_admin_notices` =
-Since 2.0.0, Pantheon Advanced Page Cache displays a number of admin notices about your current cache max age value. You can disable these notices with the `pantheon_apc_disable_admin_notices` filter.
-
-	add_filter( 'pantheon_apc_disable_admin_notices', '__return_true' );
-
-Alternately, the function callback is passed into the `pantheon_apc_disable_admin_notices` filter, allowing you to specify precisely _which_ notice to disable, for example:
-
-	add_filter( 'pantheon_apc_disable_admin_notices', function( $disable_notices, $callback ) {
-    	if ( $callback === '\\Pantheon_Advanced_Page_Cache\\Admin_Interface\\admin_notice_maybe_recommend_higher_max_age' ) {
-        	return true;
-    	}
-    	return $disable_notices;
-	}, 10, 2 );
-
-The above example would disable _only_ the admin notice recommending a higher cache max age.
-
-== Other Filters ==
-
 = pantheon_apc_disable_admin_notices =
 Since 2.0.0, Pantheon Advanced Page Cache displays a number of admin notices about your current cache max age value. You can disable these notices with the `pantheon_apc_disable_admin_notices` filter.
 
@@ -388,6 +368,10 @@ Pantheon Advanced Page Cache integrates with WordPress plugins, including:
 See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/master/CONTRIBUTING.md) for information on contributing.
 
 == Changelog ==
+= 2.1.0 (8 August 2024) =
+* Adds any callable functions hooked to the `pantheon_cache_default_max_age` filter to the message that displays in the WordPress admin when a cache max age filter is active. [[#292](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/292)] This gives some context to troubleshoot if the filter is active somewhere in the codebase. If an anonymous function is used, it is noted in the message that displays.
+* Removes the hook to `nonce_life` and replaces it with a new action (`pantheon_cache_nonce_lifetime`, see [documentation](https://github.com/pantheon-systems/pantheon-advanced-page-cache?tab=readme-ov-file#updating-the-cache-max-age-based-on-nonces)). [[#293](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/293)] This was erroneously overriding any admin settings and setting the default cache max age for some sites to always be 23 hours (the nonce lifetime minus 1 hour). This solution requires that developers add the `do_action` when they are creating nonces on the front-end, but allows the cache settings to work as designed in all other instances.
+
 = 2.0.0 (28 May 2024) =
 * Adds new admin alerts and Site Health tests about default cache max age settings and recommendations [[#268](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/268), [#271](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/271)]. The default Pantheon GCDN cache max age value has been updated to 1 week in the [Pantheon MU plugin](https://github.com/pantheon-systems/pantheon-mu-plugin). For more information, see the [release note](https://docs.pantheon.io/release-notes/2024/04/pantheon-mu-plugin-1-4-0-update).
 * Updated UI in Pantheon Page Cache admin page when used in a Pantheon environment (with the Pantheon MU plugin). [[#272](https://github.com/pantheon-systems/pantheon-advanced-page-cache/pull/272)] This UI change takes effect when [Pantheon MU plugin version 1.4.3](https://docs.pantheon.io/release-notes/2024/05/pantheon-mu-plugin-1-4-3-update) is available on your site.

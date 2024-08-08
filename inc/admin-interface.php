@@ -42,7 +42,7 @@ function bootstrap() {
 	add_filter( 'pantheon_cache_max_age_field_after_html', __NAMESPACE__ . '\\add_max_age_setting_description' );
 	add_filter( 'pantheon_cache_max_age_input', __NAMESPACE__ . '\\update_default_ttl_input' );
 	add_filter( 'pantheon_cache_max_age_input_allowed_html', __NAMESPACE__ . '\\max_age_input_allowed_html' );
-	add_filter( 'nonce_life', __NAMESPACE__ . '\\filter_nonce_cache_lifetime' );
+	add_action( 'pantheon_cache_nonce_lifetime', __NAMESPACE__ . '\\filter_nonce_cache_lifetime' );
 }
 
 /**
@@ -87,6 +87,55 @@ function add_max_age_setting_header() {
 }
 
 /**
+ * Get the callback(s) hooked to pantheon_cache_default_max_age, if one exists.
+ *
+ * @since 2.1.0
+ * @return string
+ */
+function get_pantheon_cache_filter_callback() {
+	global $wp_filter;
+	$hook = 'pantheon_cache_default_max_age';
+	$output = '';
+
+	if ( ! has_filter( $hook ) ) {
+		return $output;
+	}
+
+	$callback_functions = [];
+	if ( isset( $wp_filter[ $hook ] ) ) {
+		foreach ( $wp_filter[ $hook ]->callbacks as $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				if ( is_string( $callback['function'] ) ) {
+					// Function name.
+					$callback_functions[] = $callback['function'];
+				} elseif ( is_array( $callback['function'] ) ) {
+					// Method call.
+					$class = is_object( $callback['function'][0] ) ? get_class( $callback['function'][0] ) : $callback['function'][0];
+					$method = $callback['function'][1];
+					$callback_functions[] = "$class::$method";
+				} else {
+					$callback_functions[] = __( 'an anonymous function', 'pantheon-advanced-page-cache' );
+				}
+			}
+		}
+	}
+
+	// Count the callbacks and if there's only one, return the name (if able).
+	$callbacks_count = count( $callback_functions );
+	if ( $callbacks_count === 1 ) {
+		return stripos( $callback_functions[0], 'an anonymous function' ) === false ? "<code>{$callback_functions[0]}<code>" : $callback_functions[0];
+	}
+
+	// If there are multiple callbacks, format the output.
+	foreach ( $callback_functions as $index => $callback ) {
+		$callback = stripos( $callback, 'anonymous' ) !== false ? $callback : "<code>$callback</code>";
+		$output .= $index === $callbacks_count - 1 ? __( 'and', 'pantheon-advanced-page-cache' ) . ' ' . $callback : $callback . ', ';
+	}
+
+	return $output;
+}
+
+/**
  * Add a description to the max-age setting field.
  *
  * @since 2.0.0
@@ -94,15 +143,27 @@ function add_max_age_setting_header() {
  */
 function add_max_age_setting_description() {
 	$is_filtered = has_filter( 'pantheon_cache_default_max_age' );
+	$filter_callback = get_pantheon_cache_filter_callback();
+	$filtered_message = '';
 	$above_recommended_message = __( 'Your cache maximum age is currently <strong>above</strong> the recommended value.', 'pantheon-advanced-page-cache' );
 	$below_recommended_message = __( 'Your cache maximum age is currently <strong>below</strong> the recommended value.', 'pantheon-advanced-page-cache' );
 	$recommended_message = __( 'Your cache maximum age is currently set to the recommended value.', 'pantheon-advanced-page-cache' );
 	$recommendation_message = get_current_max_age() > WEEK_IN_SECONDS ? $above_recommended_message : ( get_current_max_age() < WEEK_IN_SECONDS ? $below_recommended_message : $recommended_message );
-	$filtered_message = $is_filtered ? sprintf(
-		// translators: %s is the humanized max-age.
-		__( 'This value has been hardcoded to %s via a filter.', 'pantheon-advanced-page-cache' ),
-		'<strong>' . humanized_max_age() . '</strong>'
-	) : '';
+
+	if ( $is_filtered ) {
+		// Set the message to name the callback(s).
+		$filtered_message = ! empty( $filter_callback ) ? sprintf(
+			// translators: %1$s is the humanized max-age, %2$s is the callback function(s).
+			__( 'This value has been hardcoded to %1$s via a filter hooked to %2$s in your code.', 'pantheon-advanced-page-cache' ),
+			'<strong>' . humanized_max_age() . '</strong>',
+			$filter_callback
+		) : sprintf(
+			// translators: %s is the humanized max-age.
+			__( 'This value has been hardcoded to %s via a filter.', 'pantheon-advanced-page-cache' ),
+			'<strong>' . humanized_max_age() . '</strong>'
+		); // If there's no callback, we'll just note that it's been hardcoded. This shouldn't ever happen.
+	}
+
 	$pantheon_cache = get_option( 'pantheon-cache', [] );
 	$has_custom_ttl = isset( $pantheon_cache['default_ttl'] ) && ! array_key_exists( $pantheon_cache['default_ttl'], max_age_options() );
 	$filtered_message .= $has_custom_ttl && ! $is_filtered ? '<br />' . __( '<strong>Warning:</strong>The cache max age is not one of the recommended values. If this is not intentional, you should remove this custom value and save the settings, then select one of the options from the dropdown.', 'pantheon-advanced-page-cache' ) : '';
@@ -587,24 +648,26 @@ function max_age_updated_admin_notice() {
 	update_user_meta( $current_user_id, 'pantheon_max_age_updated_notice', true );
 }
 
+
 /**
- * Filter the nonce cache lifetime.
+ * Filter the cache lifetime for nonces.
  *
- * @param int $lifetime The lifetime of the nonce.
+ * Hooked to pantheon_cache_nonce_lifetime action. Use this to filter the cache lifetime for nonces using the action, e.g.:
+ *
+ * do_action( 'pantheon_cache_nonce_lifetime' );
  *
  * @since 2.0.0
- * @return int
+ * @return void
  */
-function filter_nonce_cache_lifetime( $lifetime ) {
+function filter_nonce_cache_lifetime() {
 	// Bail early if we're in the admin.
 	if ( is_admin() ) {
-		return $lifetime;
+		return;
 	}
 
 	// Filter the cache default max age to less than the nonce lifetime when creating nonces on the front-end. This prevents the cache from keeping the nonce around longer than it should.
-	add_filter( 'pantheon_cache_default_max_age', function () use ( $lifetime ) {
+	add_filter( 'pantheon_cache_default_max_age', function () {
+		$lifetime = apply_filters( 'nonce_life', DAY_IN_SECONDS );
 		return $lifetime - HOUR_IN_SECONDS;
 	} );
-
-	return $lifetime;
 }
